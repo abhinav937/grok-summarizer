@@ -231,6 +231,7 @@ Rules — follow without exception:
 
       const briefing = data.choices[0].message.content;
       const usage = data.usage || {};
+      const modelUsed = data.model || model; // Get actual model from API response
 
       const promptTokens = usage.prompt_tokens || 0;
       const completionTokens = usage.completion_tokens || 0;
@@ -238,19 +239,19 @@ Rules — follow without exception:
       const cachedTokens = usage.prompt_tokens_details?.cached_tokens || 0;
 
       const costBreakdown = calculateCost(
-        model,
+        modelUsed,
         promptTokens,
         completionTokens,
         cachedTokens
       );
 
-      logger.info(`Successfully generated briefing using ${model}`);
+      logger.info(`Successfully generated briefing using ${modelUsed}`);
       logger.info(`Token usage - Prompt: ${promptTokens}, Completion: ${completionTokens}, Cached: ${cachedTokens}, Total: ${totalTokens}`);
       logger.info(`Cost - $${costBreakdown.total_cost.toFixed(6)} USD`);
 
       return {
         briefing,
-        model_used: model,
+        model_used: modelUsed,
         usage: {
           prompt_tokens: promptTokens,
           completion_tokens: completionTokens,
@@ -350,6 +351,11 @@ async function handleBriefing(req: Request, res: Response) {
       metadata: {
         documents_processed: Object.keys(docContents).length,
         documents_requested: Object.keys(CORE_DOCS).length,
+        data_source: {
+          model_used: "from_xai_api",
+          token_usage: "from_xai_api",
+          cost: "calculated_locally"
+        }
       },
     });
   } catch (error: any) {
@@ -397,6 +403,8 @@ app.get('/pricing', (req: Request, res: Response) => {
     unit: 'per 1M tokens',
     models: modelsWithPricing,
     notes: [
+      'These prices are used for local cost estimation only',
+      'Actual billing is done by xAI - check your xAI dashboard for real costs',
       'Cached tokens are significantly cheaper than regular input tokens',
       'Reasoning models may use additional reasoning tokens counted as output',
       'Prices are subject to change - check https://docs.x.ai/docs/models for latest',
