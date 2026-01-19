@@ -27,27 +27,27 @@ const FALLBACK_MODEL = "grok-4-1-fast-reasoning";
 const DOWNLOAD_TIMEOUT = parseInt(process.env.DOWNLOAD_TIMEOUT || '30') * 1000;
 const API_TIMEOUT = parseInt(process.env.API_TIMEOUT || '180') * 1000;
 
-// Pricing per 1M tokens (as of xAI pricing page)
+// Pricing per 1M tokens (updated January 2026 - https://x.ai/api)
 const PRICING: Record<string, { input: number; output: number; cached: number }> = {
   "grok-4-1-fast-reasoning": {
-    input: 2.00,
-    output: 10.00,
-    cached: 0.20,
+    input: 0.20,   // $0.20 per 1M tokens
+    output: 0.50,  // $0.50 per 1M tokens
+    cached: 0.02,  // $0.02 per 1M tokens
   },
   "grok-4-fast-reasoning": {
-    input: 2.00,
-    output: 10.00,
-    cached: 0.20,
+    input: 0.20,   // $0.20 per 1M tokens
+    output: 0.50,  // $0.50 per 1M tokens
+    cached: 0.02,  // $0.02 per 1M tokens
   },
   "grok-4-fast": {
-    input: 0.50,
-    output: 1.50,
-    cached: 0.05,
+    input: 0.20,   // $0.20 per 1M tokens (≤128k prompt)
+    output: 0.50,  // $0.50 per 1M tokens
+    cached: 0.05,  // $0.05 per 1M tokens
   },
   default: {
-    input: 2.00,
-    output: 10.00,
-    cached: 0.20,
+    input: 0.20,
+    output: 0.50,
+    cached: 0.02,
   },
 };
 
