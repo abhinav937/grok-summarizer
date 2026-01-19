@@ -16,8 +16,8 @@ interface BriefingResponse {
 }
 
 const API_BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'https://jarvis-api-eight.vercel.app/'
-  : '';
+  ? ''
+  : 'http://localhost:8000';
 
 function App() {
   const [loading, setLoading] = useState(false);
