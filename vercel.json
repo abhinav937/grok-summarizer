@@ -2,7 +2,12 @@
   "buildCommand": "cd frontend && npm ci && npm run build",
   "outputDirectory": "frontend/build",
   "installCommand": "pip install -r jarvis-api/requirements.txt",
-  "cleanUrls": true,
+  "functions": {
+    "jarvis-api/api/jarvis.py": {
+      "runtime": "python3.12",
+      "maxDuration": 60
+    }
+  },
   "rewrites": [
     {
       "source": "/api/jarvis",
@@ -15,17 +20,6 @@
     {
       "source": "/pricing",
       "destination": "/jarvis-api/api/jarvis.py"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Credentials", "value": "true" },
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "X-Requested-With,Content-Type,Authorization" }
-      ]
     }
   ]
 }

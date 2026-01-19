@@ -468,3 +468,6 @@ def get_pricing():
             "Prices are subject to change - check https://docs.x.ai/docs/models for latest"
         ]
     }
+
+# Vercel serverless function handler
+handler = app
