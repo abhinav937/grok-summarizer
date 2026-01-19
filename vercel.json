@@ -1,6 +1,4 @@
 {
-  "buildCommand": "cd frontend && npm ci && npm run build",
-  "outputDirectory": "frontend/build",
   "installCommand": "pip install -r jarvis-api/requirements.txt",
   "rewrites": [
     {
@@ -14,10 +12,6 @@
     {
       "source": "/pricing",
       "destination": "/jarvis-api/api/jarvis.py"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
     }
   ]
 }
