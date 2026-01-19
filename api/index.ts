@@ -22,27 +22,32 @@ const CORE_DOCS: Record<string, string> = {
     "https://docs.google.com/document/d/1ns8g0pHyD6gchd8-ZyWlMDxov-DzxoOY0aOgv1NpZOE/export?format=txt",
 };
 
-const PRIMARY_MODEL = "grok-beta";
-const FALLBACK_MODEL = "grok-beta";
+const PRIMARY_MODEL = "grok-4-1-fast-reasoning";
+const FALLBACK_MODEL = "grok-4-1-fast-reasoning";
 const DOWNLOAD_TIMEOUT = parseInt(process.env.DOWNLOAD_TIMEOUT || '30') * 1000;
 const API_TIMEOUT = parseInt(process.env.API_TIMEOUT || '180') * 1000;
 
 // Pricing per 1M tokens (as of xAI pricing page)
 const PRICING: Record<string, { input: number; output: number; cached: number }> = {
-  "grok-beta": {
-    input: 5.00,
-    output: 15.00,
-    cached: 0.50,
+  "grok-4-1-fast-reasoning": {
+    input: 2.00,
+    output: 10.00,
+    cached: 0.20,
   },
-  "grok-vision-beta": {
-    input: 5.00,
-    output: 15.00,
-    cached: 0.50,
+  "grok-4-fast-reasoning": {
+    input: 2.00,
+    output: 10.00,
+    cached: 0.20,
+  },
+  "grok-4-fast": {
+    input: 0.50,
+    output: 1.50,
+    cached: 0.05,
   },
   default: {
-    input: 5.00,
-    output: 15.00,
-    cached: 0.50,
+    input: 2.00,
+    output: 10.00,
+    cached: 0.20,
   },
 };
 
