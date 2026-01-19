@@ -1,0 +1,4 @@
+fastapi
+uvicorn  # For local testing (Vercel uses its own runtime)
+requests
+xai-sdk  # Your core SDK (assuming it's pip-installable; if not, vendor it)
