@@ -5,14 +5,32 @@ interface Usage {
   prompt_tokens: number;
   completion_tokens: number;
   reasoning_tokens: number;
+  cached_tokens: number;
   total_tokens: number;
+}
+
+interface Cost {
+  input_cost: number;
+  output_cost: number;
+  cache_cost: number;
+  total_cost: number;
+  currency: string;
+}
+
+interface Metadata {
+  documents_processed: number;
+  documents_requested: number;
 }
 
 interface BriefingResponse {
   status: string;
+  request_id: string;
+  timestamp: string;
   briefing: string;
   model_used: string;
   usage: Usage;
+  cost: Cost;
+  metadata: Metadata;
 }
 
 const API_BASE_URL = process.env.NODE_ENV === 'production'
@@ -52,56 +70,122 @@ function App() {
     }
   };
 
-  const calculateCost = (usage: Usage) => {
-    const INPUT_COST_PER_1M = 0.03;
-    const OUTPUT_COST_PER_1M = 0.15;
-    const REASONING_COST_PER_1M = 0.15;
-
-    const inputCost = (usage.prompt_tokens / 1_000_000) * INPUT_COST_PER_1M;
-    const outputCost = (usage.completion_tokens / 1_000_000) * OUTPUT_COST_PER_1M;
-    const reasoningCost = (usage.reasoning_tokens / 1_000_000) * REASONING_COST_PER_1M;
-    const totalCost = inputCost + outputCost + reasoningCost;
-
-    return {
-      inputCost: inputCost.toFixed(6),
-      outputCost: outputCost.toFixed(6),
-      reasoningCost: reasoningCost.toFixed(6),
-      totalCost: totalCost.toFixed(6),
-    };
+  const formatBriefing = (text: string) => {
+    // Split by newlines and render with proper formatting
+    return text.split('\n').map((line, index) => (
+      <React.Fragment key={index}>
+        {line}
+        <br />
+      </React.Fragment>
+    ));
   };
 
   return (
     <div className="App">
       <header className="App-header">
-        <h1>JARVIS Progress Briefing</h1>
-        <button onClick={generateBriefing} disabled={loading}>
-          {loading ? 'Generating...' : 'Generate Briefing'}
+        <h1>🤖 JARVIS Progress Briefing</h1>
+        <p className="subtitle">AI-powered progress reports by your virtual chief of staff</p>
+
+        <button
+          onClick={generateBriefing}
+          disabled={loading}
+          className="generate-button"
+        >
+          {loading ? '⚙️ Generating...' : '🚀 Generate Briefing'}
         </button>
-        {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+
+        {error && (
+          <div className="error-box">
+            <h3>❌ Error</h3>
+            <p>{error}</p>
+          </div>
+        )}
+
         {response && (
-          <div>
-            <h2>Briefing:</h2>
-            <p>{response.briefing}</p>
-            <h3>Model Used: {response.model_used}</h3>
-            <h3>Token Usage:</h3>
-            <ul>
-              <li>Prompt Tokens: {response.usage.prompt_tokens}</li>
-              <li>Completion Tokens: {response.usage.completion_tokens}</li>
-              <li>Reasoning Tokens: {response.usage.reasoning_tokens}</li>
-              <li>Total Tokens: {response.usage.total_tokens}</li>
-            </ul>
-            <h3>Cost Analysis:</h3>
-            {(() => {
-              const costs = calculateCost(response.usage);
-              return (
-                <ul>
-                  <li>Input Cost: ${costs.inputCost}</li>
-                  <li>Output Cost: ${costs.outputCost}</li>
-                  <li>Reasoning Cost: ${costs.reasoningCost}</li>
-                  <li>Total Cost: ${costs.totalCost}</li>
-                </ul>
-              );
-            })()}
+          <div className="response-container">
+            <div className="briefing-section">
+              <h2>📋 Briefing</h2>
+              <div className="briefing-content">
+                {formatBriefing(response.briefing)}
+              </div>
+            </div>
+
+            <div className="metadata-grid">
+              <div className="metadata-card">
+                <h3>🤖 Model</h3>
+                <p className="model-name">{response.model_used}</p>
+              </div>
+
+              <div className="metadata-card">
+                <h3>📄 Documents</h3>
+                <p>{response.metadata.documents_processed} of {response.metadata.documents_requested} processed</p>
+              </div>
+
+              <div className="metadata-card">
+                <h3>⏱️ Timestamp</h3>
+                <p className="timestamp">{new Date(response.timestamp).toLocaleString()}</p>
+              </div>
+
+              <div className="metadata-card">
+                <h3>🆔 Request ID</h3>
+                <p className="request-id">{response.request_id.slice(0, 8)}...</p>
+              </div>
+            </div>
+
+            <div className="stats-grid">
+              <div className="stat-card">
+                <h3>🔢 Token Usage</h3>
+                <table className="stat-table">
+                  <tbody>
+                    <tr>
+                      <td>Input Tokens:</td>
+                      <td className="stat-value">{response.usage.prompt_tokens.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                      <td>Output Tokens:</td>
+                      <td className="stat-value">{response.usage.completion_tokens.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                      <td>Reasoning Tokens:</td>
+                      <td className="stat-value">{response.usage.reasoning_tokens.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                      <td>Cached Tokens:</td>
+                      <td className="stat-value highlight">{response.usage.cached_tokens.toLocaleString()}</td>
+                    </tr>
+                    <tr className="total-row">
+                      <td><strong>Total Tokens:</strong></td>
+                      <td className="stat-value"><strong>{response.usage.total_tokens.toLocaleString()}</strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="stat-card">
+                <h3>💰 Cost Breakdown</h3>
+                <table className="stat-table">
+                  <tbody>
+                    <tr>
+                      <td>Input Cost:</td>
+                      <td className="stat-value">${response.cost.input_cost.toFixed(6)}</td>
+                    </tr>
+                    <tr>
+                      <td>Output Cost:</td>
+                      <td className="stat-value">${response.cost.output_cost.toFixed(6)}</td>
+                    </tr>
+                    <tr>
+                      <td>Cache Cost:</td>
+                      <td className="stat-value highlight">${response.cost.cache_cost.toFixed(6)}</td>
+                    </tr>
+                    <tr className="total-row">
+                      <td><strong>Total Cost:</strong></td>
+                      <td className="stat-value"><strong>${response.cost.total_cost.toFixed(6)} {response.cost.currency}</strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p className="cost-note">💡 Cached tokens save you money!</p>
+              </div>
+            </div>
           </div>
         )}
       </header>

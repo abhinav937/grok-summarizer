@@ -1,19 +1,31 @@
 {
-  "version": 2,
-  "builds": [
+  "buildCommand": "cd frontend && npm ci && npm run build",
+  "outputDirectory": "frontend/build",
+  "installCommand": "pip install -r jarvis-api/requirements.txt",
+  "functions": {
+    "jarvis-api/api/*.py": {
+      "runtime": "python3.12"
+    }
+  },
+  "rewrites": [
     {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build"
+      "source": "/api/:path*",
+      "destination": "/jarvis-api/api/jarvis.py"
     },
     {
-      "src": "jarvis-api/api/jarvis.py",
-      "use": "@vercel/python"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
-  "routes": [
+  "headers": [
     {
-      "src": "/api/jarvis",
-      "dest": "jarvis-api/api/jarvis.py"
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Credentials", "value": "true" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "X-Requested-With,Content-Type,Authorization" }
+      ]
     }
   ]
 }
