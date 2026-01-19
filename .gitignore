@@ -1,2 +1,16 @@
+# Vercel
 .vercel
+
+# Environment
 .env*.local
+.env
+
+# Node
+node_modules/
+dist/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
