@@ -1,4 +1,4 @@
-fastapi
-uvicorn  # For local testing (Vercel uses its own runtime)
-requests
-xai-sdk  # Your core SDK (assuming it's pip-installable; if not, vendor it)
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+requests>=2.31.0
+xai-sdk>=1.4.0
