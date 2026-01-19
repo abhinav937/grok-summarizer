@@ -3,23 +3,29 @@
   "outputDirectory": "frontend/build",
   "installCommand": "pip install -r jarvis-api/requirements.txt",
   "functions": {
-    "jarvis-api/api/jarvis.py": {
-      "runtime": "python3.12",
-      "maxDuration": 60
+    "api/*.py": {
+      "runtime": "python3.12"
+    },
+    "jarvis-api/api/*.py": {
+      "runtime": "python3.12"
     }
   },
   "rewrites": [
     {
-      "source": "/api/jarvis",
-      "destination": "/jarvis-api/api/jarvis.py"
+      "source": "/api/:path*",
+      "destination": "/api/index.py"
     },
     {
       "source": "/health",
-      "destination": "/jarvis-api/api/jarvis.py"
+      "destination": "/api/index.py"
     },
     {
       "source": "/pricing",
-      "destination": "/jarvis-api/api/jarvis.py"
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
