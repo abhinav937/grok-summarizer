@@ -1,13 +1,11 @@
 {
+  "version": 2,
   "buildCommand": "cd frontend && npm ci && npm run build",
   "outputDirectory": "frontend/build",
   "installCommand": "pip install -r jarvis-api/requirements.txt",
   "functions": {
-    "api/*.py": {
-      "runtime": "python3.12"
-    },
-    "jarvis-api/api/*.py": {
-      "runtime": "python3.12"
+    "api/**/*.py": {
+      "runtime": "@vercel/python@3.12"
     }
   },
   "rewrites": [
