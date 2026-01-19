@@ -2,14 +2,19 @@
   "buildCommand": "cd frontend && npm ci && npm run build",
   "outputDirectory": "frontend/build",
   "installCommand": "pip install -r jarvis-api/requirements.txt",
+  "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/api/:path*",
+      "source": "/api/jarvis",
       "destination": "/jarvis-api/api/jarvis.py"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "source": "/health",
+      "destination": "/jarvis-api/api/jarvis.py"
+    },
+    {
+      "source": "/pricing",
+      "destination": "/jarvis-api/api/jarvis.py"
     }
   ],
   "headers": [
