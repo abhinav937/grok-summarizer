@@ -5,32 +5,14 @@ interface Usage {
   prompt_tokens: number;
   completion_tokens: number;
   reasoning_tokens: number;
-  cached_tokens: number;
   total_tokens: number;
-}
-
-interface Cost {
-  input_cost: number;
-  output_cost: number;
-  cache_cost: number;
-  total_cost: number;
-  currency: string;
-}
-
-interface Metadata {
-  documents_processed: number;
-  documents_requested: number;
 }
 
 interface BriefingResponse {
   status: string;
-  request_id: string;
-  timestamp: string;
   briefing: string;
   model_used: string;
   usage: Usage;
-  cost: Cost;
-  metadata: Metadata;
 }
 
 const API_BASE_URL = process.env.NODE_ENV === 'production'
@@ -70,136 +52,59 @@ function App() {
     }
   };
 
+  const calculateCost = (usage: Usage) => {
+    const INPUT_COST_PER_1M = 0.03;
+    const OUTPUT_COST_PER_1M = 0.15;
+    const REASONING_COST_PER_1M = 0.15;
+
+    const inputCost = (usage.prompt_tokens / 1_000_000) * INPUT_COST_PER_1M;
+    const outputCost = (usage.completion_tokens / 1_000_000) * OUTPUT_COST_PER_1M;
+    const reasoningCost = (usage.reasoning_tokens / 1_000_000) * REASONING_COST_PER_1M;
+    const totalCost = inputCost + outputCost + reasoningCost;
+
+    return {
+      inputCost: inputCost.toFixed(6),
+      outputCost: outputCost.toFixed(6),
+      reasoningCost: reasoningCost.toFixed(6),
+      totalCost: totalCost.toFixed(6),
+    };
+  };
+
   return (
-    <div className="container">
-      {/* Header Section */}
-      <section className="section">
-        <header className="header">
-          <h1>JARVIS Progress Briefing</h1>
-          <p>AI-powered progress tracking system</p>
-        </header>
-
-        <button
-          onClick={generateBriefing}
-          disabled={loading}
-          className="button"
-          style={{ marginTop: '1.5rem' }}
-        >
-          {loading ? '[ Generating... ]' : '[ Generate Briefing ]'}
+    <div className="App">
+      <header className="App-header">
+        <h1>JARVIS Progress Briefing</h1>
+        <button onClick={generateBriefing} disabled={loading}>
+          {loading ? 'Generating...' : 'Generate Briefing'}
         </button>
-      </section>
-
-      {/* Error Section */}
-      {error && (
-        <section className="section">
-          <h2 className="section-title error">Error</h2>
-          <div className="error-content">
-            <p>{error}</p>
-            <details className="error-details">
-              <summary>Troubleshooting</summary>
-              <ul>
-                <li>Ensure the backend API is running</li>
-                <li>Check that XAI_API_KEY is set</li>
-                <li>Verify Google Docs URLs are accessible</li>
-                <li>Check browser console for detailed errors</li>
-              </ul>
-            </details>
+        {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+        {response && (
+          <div>
+            <h2>Briefing:</h2>
+            <p>{response.briefing}</p>
+            <h3>Model Used: {response.model_used}</h3>
+            <h3>Token Usage:</h3>
+            <ul>
+              <li>Prompt Tokens: {response.usage.prompt_tokens}</li>
+              <li>Completion Tokens: {response.usage.completion_tokens}</li>
+              <li>Reasoning Tokens: {response.usage.reasoning_tokens}</li>
+              <li>Total Tokens: {response.usage.total_tokens}</li>
+            </ul>
+            <h3>Cost Analysis:</h3>
+            {(() => {
+              const costs = calculateCost(response.usage);
+              return (
+                <ul>
+                  <li>Input Cost: ${costs.inputCost}</li>
+                  <li>Output Cost: ${costs.outputCost}</li>
+                  <li>Reasoning Cost: ${costs.reasoningCost}</li>
+                  <li>Total Cost: ${costs.totalCost}</li>
+                </ul>
+              );
+            })()}
           </div>
-        </section>
-      )}
-
-      {/* Briefing Response */}
-      {response && (
-        <>
-          {/* Briefing Text */}
-          <section className="section">
-            <div className="briefing-header">
-              <h2 className="section-title" style={{ marginBottom: 0 }}>Briefing</h2>
-              <div className="briefing-meta">
-                <span>{response.model_used}</span>
-                <span>{new Date().toLocaleString()}</span>
-              </div>
-            </div>
-            <div className="briefing-text">{response.briefing}</div>
-          </section>
-
-          {/* Token Usage */}
-          <section className="section">
-            <h2 className="section-title">Token Usage</h2>
-            <div className="grid">
-              <div className="grid-item">
-                <div className="grid-label">Prompt</div>
-                <div className="grid-value">{response.usage.prompt_tokens.toLocaleString()}</div>
-              </div>
-              <div className="grid-item">
-                <div className="grid-label">Completion</div>
-                <div className="grid-value">{response.usage.completion_tokens.toLocaleString()}</div>
-              </div>
-              <div className="grid-item">
-                <div className="grid-label">Reasoning</div>
-                <div className="grid-value">{response.usage.reasoning_tokens.toLocaleString()}</div>
-              </div>
-              <div className="grid-item">
-                <div className="grid-label">Cached</div>
-                <div className="grid-value">{response.usage.cached_tokens.toLocaleString()}</div>
-              </div>
-            </div>
-            <div className="total-tokens">
-              <div className="grid-label">Total Tokens</div>
-              <div className="grid-value">{response.usage.total_tokens.toLocaleString()}</div>
-            </div>
-          </section>
-
-          {/* Cost Breakdown */}
-          <section className="section">
-            <h2 className="section-title">Cost Analysis</h2>
-            <div className="grid">
-              <div className="grid-item">
-                <div className="grid-label">Input Cost</div>
-                <div className="grid-value">${response.cost.input_cost.toFixed(6)}</div>
-              </div>
-              <div className="grid-item">
-                <div className="grid-label">Output Cost</div>
-                <div className="grid-value">${response.cost.output_cost.toFixed(6)}</div>
-              </div>
-              <div className="grid-item">
-                <div className="grid-label">Cache Cost</div>
-                <div className="grid-value">${response.cost.cache_cost.toFixed(6)}</div>
-              </div>
-              <div className="grid-item highlight">
-                <div className="grid-label">Total Cost</div>
-                <div className="grid-value">${response.cost.total_cost.toFixed(6)}</div>
-              </div>
-            </div>
-            <p className="cost-note">
-              * Prices based on real-time model-specific rates. All costs in {response.cost.currency}.
-            </p>
-          </section>
-
-          {/* Metadata */}
-          <section className="section">
-            <h2 className="section-title">Metadata</h2>
-            <div className="grid">
-              <div className="grid-item">
-                <div className="grid-label">Request ID</div>
-                <div className="grid-value">{response.request_id}</div>
-              </div>
-              <div className="grid-item">
-                <div className="grid-label">Timestamp</div>
-                <div className="grid-value">{new Date(response.timestamp).toLocaleString()}</div>
-              </div>
-              <div className="grid-item">
-                <div className="grid-label">Documents Processed</div>
-                <div className="grid-value">{response.metadata.documents_processed} / {response.metadata.documents_requested}</div>
-              </div>
-              <div className="grid-item">
-                <div className="grid-label">Status</div>
-                <div className="grid-value status-success">{response.status}</div>
-              </div>
-            </div>
-          </section>
-        </>
-      )}
+        )}
+      </header>
     </div>
   );
 }
