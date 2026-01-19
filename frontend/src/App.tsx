@@ -71,7 +71,6 @@ function App() {
   };
 
   const formatBriefing = (text: string) => {
-    // Split by newlines and render with proper formatting
     return text.split('\n').map((line, index) => (
       <React.Fragment key={index}>
         {line}
@@ -81,114 +80,198 @@ function App() {
   };
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>🤖 JARVIS Progress Briefing</h1>
-        <p className="subtitle">AI-powered progress reports by your virtual chief of staff</p>
+    <div className="container">
+      <div className="space-y-12">
+        {/* Header */}
+        <header className="flex justify-between items-baseline flex-wrap gap-4">
+          <div>
+            <h1 className="text-xl font-bold uppercase tracking-widest">/JARVIS</h1>
+            <p className="mt-2 text-sm text-gray-600 tracking-tight">
+              AI-powered progress briefing system. Generate comprehensive status reports from your tracked documents with{' '}
+              <span className="text-black font-medium">real-time cost tracking</span> and{' '}
+              <span className="text-black font-medium">usage analytics</span>.
+            </p>
+          </div>
+          <div className="flex gap-4 flex-wrap">
+            <button
+              onClick={generateBriefing}
+              disabled={loading}
+              className="text-xs font-mono uppercase px-4 py-2 bg-black text-white hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all"
+            >
+              {loading ? '⚙ GENERATING...' : '▶ GENERATE BRIEFING'}
+            </button>
+          </div>
+        </header>
 
-        <button
-          onClick={generateBriefing}
-          disabled={loading}
-          className="generate-button"
-        >
-          {loading ? '⚙️ Generating...' : '🚀 Generate Briefing'}
-        </button>
-
+        {/* Error Display */}
         {error && (
-          <div className="error-box">
-            <h3>❌ Error</h3>
-            <p>{error}</p>
+          <div className="border border-black p-6 bg-red-50">
+            <h3 className="text-xs font-bold uppercase tracking-widest mb-2 text-red-800">
+              ⚠ ERROR
+            </h3>
+            <p className="text-xs text-red-600 font-mono leading-relaxed">
+              {error}
+            </p>
           </div>
         )}
 
+        {/* Results */}
         {response && (
-          <div className="response-container">
-            <div className="briefing-section">
-              <h2>📋 Briefing</h2>
-              <div className="briefing-content">
-                {formatBriefing(response.briefing)}
+          <>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              <div className="group">
+                <span className="block text-[10px] text-gray-400 uppercase tracking-widest mb-1 group-hover:text-black transition-colors">
+                  Total Cost
+                </span>
+                <span className="text-lg font-medium tabular-nums">
+                  ${response.cost.total_cost.toFixed(6)}
+                </span>
+              </div>
+              <div className="group">
+                <span className="block text-[10px] text-gray-400 uppercase tracking-widest mb-1 group-hover:text-black transition-colors">
+                  Total Tokens
+                </span>
+                <span className="text-lg font-medium tabular-nums">
+                  {response.usage.total_tokens.toLocaleString()}
+                </span>
+              </div>
+              <div className="group">
+                <span className="block text-[10px] text-gray-400 uppercase tracking-widest mb-1 group-hover:text-black transition-colors">
+                  Documents
+                </span>
+                <span className="text-lg font-medium tabular-nums">
+                  {response.metadata.documents_processed}/{response.metadata.documents_requested}
+                </span>
+              </div>
+              <div className="group">
+                <span className="block text-[10px] text-gray-400 uppercase tracking-widest mb-1 group-hover:text-black transition-colors">
+                  Model
+                </span>
+                <span className="text-sm font-medium font-mono">
+                  {response.model_used.split('-').slice(0, 2).join('-')}
+                </span>
               </div>
             </div>
 
-            <div className="metadata-grid">
-              <div className="metadata-card">
-                <h3>🤖 Model</h3>
-                <p className="model-name">{response.model_used}</p>
+            {/* Briefing Section */}
+            <section className="space-y-4 pt-4 border-t border-black">
+              <h2 className="text-xs font-bold uppercase tracking-wider">Briefing Output</h2>
+              <div className="border border-black/10 p-6 bg-gray-50">
+                <pre className="text-xs font-mono leading-relaxed whitespace-pre-wrap overflow-x-auto">
+                  {response.briefing}
+                </pre>
               </div>
+            </section>
 
-              <div className="metadata-card">
-                <h3>📄 Documents</h3>
-                <p>{response.metadata.documents_processed} of {response.metadata.documents_requested} processed</p>
+            {/* Token Usage */}
+            <section className="space-y-4">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">Token Usage Breakdown</h2>
+              <div className="border border-black/10">
+                <div className="flex justify-between items-center py-3 px-4 border-b border-black/5">
+                  <span className="text-xs font-mono text-gray-600">Input Tokens</span>
+                  <span className="text-sm font-medium tabular-nums">{response.usage.prompt_tokens.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 border-b border-black/5">
+                  <span className="text-xs font-mono text-gray-600">Output Tokens</span>
+                  <span className="text-sm font-medium tabular-nums">{response.usage.completion_tokens.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 border-b border-black/5">
+                  <span className="text-xs font-mono text-gray-600">Reasoning Tokens</span>
+                  <span className="text-sm font-medium tabular-nums">{response.usage.reasoning_tokens.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 border-b border-black/5 bg-green-50">
+                  <div>
+                    <span className="text-xs font-mono text-green-800">Cached Tokens</span>
+                    <span className="ml-2 text-[10px] text-green-600">💾 SAVINGS</span>
+                  </div>
+                  <span className="text-sm font-medium tabular-nums text-green-800">
+                    {response.usage.cached_tokens.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 bg-black text-white">
+                  <span className="text-xs font-mono uppercase tracking-wider">Total</span>
+                  <span className="text-base font-bold tabular-nums">{response.usage.total_tokens.toLocaleString()}</span>
+                </div>
               </div>
+            </section>
 
-              <div className="metadata-card">
-                <h3>⏱️ Timestamp</h3>
-                <p className="timestamp">{new Date(response.timestamp).toLocaleString()}</p>
+            {/* Cost Breakdown */}
+            <section className="space-y-4">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">Cost Breakdown</h2>
+              <div className="border border-black/10">
+                <div className="flex justify-between items-center py-3 px-4 border-b border-black/5">
+                  <div>
+                    <span className="text-xs font-mono text-gray-600">Input Cost</span>
+                    <span className="ml-2 text-[10px] text-gray-400">@ $2.00/1M</span>
+                  </div>
+                  <span className="text-sm font-medium tabular-nums">${response.cost.input_cost.toFixed(6)}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 border-b border-black/5">
+                  <div>
+                    <span className="text-xs font-mono text-gray-600">Output Cost</span>
+                    <span className="ml-2 text-[10px] text-gray-400">@ $10.00/1M</span>
+                  </div>
+                  <span className="text-sm font-medium tabular-nums">${response.cost.output_cost.toFixed(6)}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 border-b border-black/5 bg-green-50">
+                  <div>
+                    <span className="text-xs font-mono text-green-800">Cache Cost</span>
+                    <span className="ml-2 text-[10px] text-green-600">@ $0.20/1M</span>
+                  </div>
+                  <span className="text-sm font-medium tabular-nums text-green-800">
+                    ${response.cost.cache_cost.toFixed(6)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 bg-black text-white">
+                  <span className="text-xs font-mono uppercase tracking-wider">Total Cost ({response.cost.currency})</span>
+                  <span className="text-base font-bold tabular-nums">${response.cost.total_cost.toFixed(6)}</span>
+                </div>
               </div>
+              <div className="p-4 border border-black/5 bg-green-50">
+                <p className="text-xs text-green-700 leading-relaxed">
+                  💡 <span className="font-medium">Cache savings:</span> Cached tokens cost 90% less than regular input tokens
+                  ($0.20/1M vs $2.00/1M), significantly reducing API costs for repeated content.
+                </p>
+              </div>
+            </section>
 
-              <div className="metadata-card">
-                <h3>🆔 Request ID</h3>
-                <p className="request-id">{response.request_id.slice(0, 8)}...</p>
+            {/* Metadata */}
+            <div className="pt-8 border-t border-black/5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[10px] text-gray-400 font-mono uppercase tracking-widest">
+                <div>
+                  <span className="text-gray-500">Request ID:</span>{' '}
+                  <span className="text-black">{response.request_id.slice(0, 8)}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-gray-500">Generated:</span>{' '}
+                  <span className="text-black">{new Date(response.timestamp).toLocaleString()}</span>
+                </div>
               </div>
             </div>
+          </>
+        )}
 
-            <div className="stats-grid">
-              <div className="stat-card">
-                <h3>🔢 Token Usage</h3>
-                <table className="stat-table">
-                  <tbody>
-                    <tr>
-                      <td>Input Tokens:</td>
-                      <td className="stat-value">{response.usage.prompt_tokens.toLocaleString()}</td>
-                    </tr>
-                    <tr>
-                      <td>Output Tokens:</td>
-                      <td className="stat-value">{response.usage.completion_tokens.toLocaleString()}</td>
-                    </tr>
-                    <tr>
-                      <td>Reasoning Tokens:</td>
-                      <td className="stat-value">{response.usage.reasoning_tokens.toLocaleString()}</td>
-                    </tr>
-                    <tr>
-                      <td>Cached Tokens:</td>
-                      <td className="stat-value highlight">{response.usage.cached_tokens.toLocaleString()}</td>
-                    </tr>
-                    <tr className="total-row">
-                      <td><strong>Total Tokens:</strong></td>
-                      <td className="stat-value"><strong>{response.usage.total_tokens.toLocaleString()}</strong></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="stat-card">
-                <h3>💰 Cost Breakdown</h3>
-                <table className="stat-table">
-                  <tbody>
-                    <tr>
-                      <td>Input Cost:</td>
-                      <td className="stat-value">${response.cost.input_cost.toFixed(6)}</td>
-                    </tr>
-                    <tr>
-                      <td>Output Cost:</td>
-                      <td className="stat-value">${response.cost.output_cost.toFixed(6)}</td>
-                    </tr>
-                    <tr>
-                      <td>Cache Cost:</td>
-                      <td className="stat-value highlight">${response.cost.cache_cost.toFixed(6)}</td>
-                    </tr>
-                    <tr className="total-row">
-                      <td><strong>Total Cost:</strong></td>
-                      <td className="stat-value"><strong>${response.cost.total_cost.toFixed(6)} {response.cost.currency}</strong></td>
-                    </tr>
-                  </tbody>
-                </table>
-                <p className="cost-note">💡 Cached tokens save you money!</p>
-              </div>
-            </div>
+        {/* Initial State */}
+        {!response && !error && !loading && (
+          <div className="border border-black/10 p-12 text-center">
+            <p className="text-sm text-gray-600 mb-2">No briefing generated yet</p>
+            <p className="text-xs text-gray-400">
+              Click the button above to generate your first JARVIS progress briefing
+            </p>
           </div>
         )}
-      </header>
+
+        {/* Info Box */}
+        <div className="p-6 border border-black/5 bg-gray-50">
+          <h3 className="text-xs font-bold uppercase tracking-widest mb-2">About This System</h3>
+          <p className="text-xs text-gray-600 leading-relaxed">
+            JARVIS is your AI-powered virtual chief of staff, designed to generate comprehensive progress briefings
+            from your tracked documents. The system uses xAI's Grok models with real-time cost tracking, showing
+            detailed token usage and pricing breakdowns. Cache optimization automatically reduces costs for repeated content.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
