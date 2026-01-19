@@ -34,7 +34,7 @@ interface BriefingResponse {
 }
 
 const API_BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'https://jarvis-api-abhinavs-projects-5c7e31e1.vercel.app'
+  ? ''
   : '';
 
 function App() {
