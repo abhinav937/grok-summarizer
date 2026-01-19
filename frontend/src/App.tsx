@@ -70,15 +70,6 @@ function App() {
     }
   };
 
-  const formatBriefing = (text: string) => {
-    return text.split('\n').map((line, index) => (
-      <React.Fragment key={index}>
-        {line}
-        <br />
-      </React.Fragment>
-    ));
-  };
-
   return (
     <div className="container">
       <div className="space-y-12">
