@@ -279,8 +279,8 @@ def cleanup_files(client: Client, file_ids: List[str]):
             except Exception as e:
                 logger.warning(f"Failed to delete file {fid}: {str(e)}")
 
-@app.get("/")
-@app.post("/")  # Supports GET or POST for triggering
+@app.get("/api/")
+@app.post("/api/")  # Supports GET or POST for triggering
 def generate_briefing():
     """Generate JARVIS progress briefing with comprehensive error handling."""
     request_id = str(uuid.uuid4())

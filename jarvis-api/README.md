@@ -94,16 +94,16 @@ Or via Vercel dashboard: Project Settings → Environment Variables
 
 **Via GET request:**
 ```bash
-curl https://your-project.vercel.app/
+curl https://your-project.vercel.app/api/
 ```
 
 **Via POST request:**
 ```bash
-curl -X POST https://your-project.vercel.app/
+curl -X POST https://your-project.vercel.app/api/
 ```
 
-**Via browser:**
-Simply visit `https://your-project.vercel.app/` in your browser
+**Via frontend:**
+Visit your frontend deployment to use the web interface, or access API directly
 
 ### Response Format
 

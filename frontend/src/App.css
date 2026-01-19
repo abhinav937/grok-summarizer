@@ -1,0 +1,171 @@
+.container {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 6rem 1.5rem;
+  }
+}
+
+.section {
+  margin-bottom: 3rem;
+}
+
+.section + .section {
+  padding-top: 1rem;
+  border-top: 1px solid black;
+}
+
+/* Header */
+.header h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.header p {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* Button */
+.button {
+  width: 100%;
+  border: 2px solid black;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-family: monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: white;
+  color: black;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.button:hover:not(:disabled) {
+  background: black;
+  color: white;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Section Headers */
+.section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+}
+
+.section-title.error {
+  color: #dc2626;
+}
+
+/* Error Section */
+.error-content {
+  font-size: 0.875rem;
+}
+
+.error-details {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.error-details summary {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.error-details summary:hover {
+  text-decoration: none;
+}
+
+.error-details ul {
+  margin-top: 0.5rem;
+  padding-left: 1rem;
+  list-style: disc;
+  line-height: 1.5;
+}
+
+/* Briefing Section */
+.briefing-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.briefing-meta {
+  font-size: 0.625rem;
+  color: #6b7280;
+}
+
+.briefing-meta span + span {
+  margin-left: 0.75rem;
+}
+
+.briefing-text {
+  border: 1px solid black;
+  padding: 1rem;
+  font-family: monospace;
+  font-size: 0.75rem;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+/* Grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.grid-item {
+  border: 1px solid black;
+  padding: 0.75rem;
+}
+
+.grid-item.highlight {
+  border-width: 2px;
+  background: black;
+  color: white;
+}
+
+.grid-label {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+}
+
+.grid-item.highlight .grid-label {
+  color: white;
+}
+
+.grid-value {
+  font-family: monospace;
+  margin-top: 0.25rem;
+}
+
+.grid-item.highlight .grid-value {
+  font-weight: 700;
+}
+
+/* Cost note */
+.cost-note {
+  margin-top: 0.5rem;
+  font-size: 0.625rem;
+  font-family: monospace;
+  color: #6b7280;
+}
