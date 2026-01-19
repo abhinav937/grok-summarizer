@@ -399,8 +399,15 @@ app.get('/pricing', (req: Request, res: Response) => {
   });
 });
 
-// Export for Vercel
-export default app;
+// Export handler for Vercel serverless functions
+import { VercelRequest, VercelResponse } from '@vercel/node';
+
+const handler = (req: VercelRequest, res: VercelResponse) => {
+  // Handle the request with Express app
+  return app(req as any, res as any);
+};
+
+export default handler;
 
 // For local development
 if (require.main === module) {
