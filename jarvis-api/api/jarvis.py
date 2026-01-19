@@ -1,7 +1,7 @@
 """
 JARVIS Progress Briefing API Endpoint for Vercel
 - Trigger via HTTP (e.g., GET /api/jarvis)
-- Returns JSON with briefing, stats, etc.
+- Returns JSON with briefing, stats, token usage, and cost
 
 Required Environment Variables:
 - XAI_API_KEY: Your xAI API key from console.x.ai
@@ -12,14 +12,15 @@ Optional Environment Variables:
 - API_TIMEOUT: Timeout for xAI API calls in seconds (default: 180)
 """
 
+from __future__ import annotations
+
 import os
 import logging
 import requests
 import uuid
 from datetime import datetime
 from typing import Dict, List, Optional
-from fastapi.responses import JSONResponse
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException
 from xai_sdk import Client
 from xai_sdk.chat import user, system, file
 
@@ -41,7 +42,69 @@ FALLBACK_MODEL = "grok-4-fast-reasoning"
 DOWNLOAD_TIMEOUT = int(os.getenv("DOWNLOAD_TIMEOUT", "30"))
 API_TIMEOUT = int(os.getenv("API_TIMEOUT", "180"))
 
+# Pricing per 1M tokens (as of xAI pricing page)
+# https://docs.x.ai/docs/models
+PRICING = {
+    "grok-4-1-fast-reasoning": {
+        "input": 2.00,      # $2.00 per 1M input tokens
+        "output": 10.00,    # $10.00 per 1M output tokens
+        "cached": 0.20,     # $0.20 per 1M cached tokens
+    },
+    "grok-4-fast-reasoning": {
+        "input": 2.00,      # $2.00 per 1M input tokens
+        "output": 10.00,    # $10.00 per 1M output tokens
+        "cached": 0.20,     # $0.20 per 1M cached tokens
+    },
+    "grok-4-fast": {
+        "input": 0.50,      # $0.50 per 1M input tokens
+        "output": 1.50,     # $1.50 per 1M output tokens
+        "cached": 0.05,     # $0.05 per 1M cached tokens
+    },
+    # Default fallback pricing
+    "default": {
+        "input": 2.00,
+        "output": 10.00,
+        "cached": 0.20,
+    }
+}
+
 app = FastAPI()
+
+def calculate_cost(
+    model: str,
+    prompt_tokens: int,
+    completion_tokens: int,
+    cached_tokens: int = 0
+) -> Dict[str, float]:
+    """
+    Calculate the cost of API usage based on token counts.
+
+    Args:
+        model: Model name used
+        prompt_tokens: Number of input/prompt tokens
+        completion_tokens: Number of output/completion tokens
+        cached_tokens: Number of cached prompt tokens
+
+    Returns:
+        Dictionary with cost breakdown
+    """
+    # Get pricing for the model, fallback to default if not found
+    pricing = PRICING.get(model, PRICING["default"])
+
+    # Calculate costs (pricing is per 1M tokens)
+    input_cost = (prompt_tokens / 1_000_000) * pricing["input"]
+    output_cost = (completion_tokens / 1_000_000) * pricing["output"]
+    cache_cost = (cached_tokens / 1_000_000) * pricing["cached"]
+
+    total_cost = input_cost + output_cost + cache_cost
+
+    return {
+        "input_cost": round(input_cost, 6),
+        "output_cost": round(output_cost, 6),
+        "cache_cost": round(cache_cost, 6),
+        "total_cost": round(total_cost, 6),
+        "currency": "USD"
+    }
 
 def download_google_export(export_url: str) -> str:
     """Download content from Google Docs export URL with proper error handling."""
@@ -148,23 +211,49 @@ Rules — follow without exception:
                 continue
 
             # Extract usage statistics
+            prompt_tokens = getattr(response.usage, 'prompt_tokens', 0)
+            completion_tokens = getattr(response.usage, 'completion_tokens', 0)
+            total_tokens = getattr(response.usage, 'total_tokens', 0)
+
+            # Get cached tokens
+            cached_tokens = 0
+            if hasattr(response.usage, 'prompt_tokens_details'):
+                prompt_details = response.usage.prompt_tokens_details
+                if prompt_details:
+                    cached_tokens = getattr(prompt_details, 'cached_tokens', 0)
+
+            # Get reasoning tokens
             reasoning_tokens = 0
             if hasattr(response.usage, 'completion_tokens_details'):
-                details = response.usage.completion_tokens_details
-                if details:
-                    reasoning_tokens = getattr(details, 'reasoning_tokens', 0)
+                completion_details = response.usage.completion_tokens_details
+                if completion_details:
+                    reasoning_tokens = getattr(completion_details, 'reasoning_tokens', 0)
+
+            # Calculate cost
+            cost_breakdown = calculate_cost(
+                model=model,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                cached_tokens=cached_tokens
+            )
 
             result = {
                 "briefing": response.content,
                 "model_used": model,
                 "usage": {
-                    "prompt_tokens": getattr(response.usage, 'prompt_tokens', 0),
-                    "completion_tokens": getattr(response.usage, 'completion_tokens', 0),
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
                     "reasoning_tokens": reasoning_tokens,
-                    "total_tokens": getattr(response.usage, 'total_tokens', 0)
-                }
+                    "cached_tokens": cached_tokens,
+                    "total_tokens": total_tokens
+                },
+                "cost": cost_breakdown
             }
+
             logger.info(f"Successfully generated briefing using {model}")
+            logger.info(f"Token usage - Prompt: {prompt_tokens}, Completion: {completion_tokens}, Cached: {cached_tokens}, Total: {total_tokens}")
+            logger.info(f"Cost - ${cost_breakdown['total_cost']:.6f} USD")
+
             return result
 
         except Exception as e:
@@ -194,7 +283,8 @@ def cleanup_files(client: Client, file_ids: List[str]):
 @app.post("/")  # Supports GET or POST for triggering
 def generate_briefing():
     """Generate JARVIS progress briefing with comprehensive error handling."""
-    logger.info("Received briefing request")
+    request_id = str(uuid.uuid4())
+    logger.info(f"Received briefing request (request_id: {request_id})")
 
     # Initialize variables
     client = None
@@ -203,34 +293,22 @@ def generate_briefing():
     # Check API key
     api_key = os.getenv("XAI_API_KEY")
     if not api_key:
-        request_id = str(uuid.uuid4())
         timestamp = datetime.utcnow().isoformat()
-        logger.error("XAI_API_KEY environment variable not set")
-        return JSONResponse(
+        logger.error(f"XAI_API_KEY not set (request_id: {request_id})")
+        raise HTTPException(
             status_code=500,
-            content={
-                "status": "error",
-                "error": "API configuration error: XAI_API_KEY not set",
-                "timestamp": timestamp,
-                "request_id": request_id
-            }
+            detail=f"API configuration error: XAI_API_KEY not set (request_id: {request_id})"
         )
 
     try:
         client = Client(api_key=api_key, timeout=API_TIMEOUT)
         logger.info("Initialized XAI client")
     except Exception as e:
-        request_id = str(uuid.uuid4())
         timestamp = datetime.utcnow().isoformat()
-        logger.error(f"Failed to initialize XAI client: {str(e)}")
-        return JSONResponse(
+        logger.error(f"Failed to initialize XAI client (request_id: {request_id}): {str(e)}")
+        raise HTTPException(
             status_code=500,
-            content={
-                "status": "error",
-                "error": "API client initialization failed",
-                "timestamp": timestamp,
-                "request_id": request_id
-            }
+            detail=f"API client initialization failed (request_id: {request_id})"
         )
 
     try:
@@ -303,29 +381,31 @@ def generate_briefing():
             logger.error("Briefing generation returned no result")
             raise HTTPException(status_code=502, detail="Briefing generation failed: no response from AI models")
 
-        logger.info("Briefing generated successfully")
+        logger.info(f"Briefing generated successfully (request_id: {request_id})")
+
         return {
             "status": "success",
+            "request_id": request_id,
+            "timestamp": datetime.utcnow().isoformat(),
             "briefing": result["briefing"],
             "model_used": result["model_used"],
-            "usage": result["usage"]
+            "usage": result["usage"],
+            "cost": result["cost"],
+            "metadata": {
+                "documents_processed": len(uploaded_file_ids),
+                "documents_requested": len(CORE_DOCS)
+            }
         }
 
     except HTTPException:
         # Re-raise HTTPExceptions as they already have proper status codes and messages
         raise
     except Exception as e:
-        request_id = str(uuid.uuid4())
         timestamp = datetime.utcnow().isoformat()
-        logger.error(f"Unexpected error in generate_briefing (request_id: {request_id}): {str(e)}", exc_info=True)
-        return JSONResponse(
+        logger.error(f"Unexpected error (request_id: {request_id}): {str(e)}", exc_info=True)
+        raise HTTPException(
             status_code=500,
-            content={
-                "status": "error",
-                "error": f"Internal server error: {str(e)}",
-                "timestamp": timestamp,
-                "request_id": request_id
-            }
+            detail=f"Internal server error (request_id: {request_id}): {str(e)}"
         )
 
     finally:
@@ -343,7 +423,7 @@ def health_check():
     return {
         "status": "healthy",
         "service": "JARVIS Progress Briefing API",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "timestamp": datetime.utcnow().isoformat(),
         "models": {
             "primary": PRIMARY_MODEL,
@@ -353,5 +433,37 @@ def health_check():
             "download_timeout": DOWNLOAD_TIMEOUT,
             "api_timeout": API_TIMEOUT,
             "documents_count": len(CORE_DOCS)
+        },
+        "pricing_info": {
+            "note": "Prices shown are per 1M tokens",
+            "models": {
+                model: {
+                    "input_per_1m": f"${price['input']:.2f}",
+                    "output_per_1m": f"${price['output']:.2f}",
+                    "cached_per_1m": f"${price['cached']:.2f}"
+                }
+                for model, price in PRICING.items() if model != "default"
+            }
         }
+    }
+
+@app.get("/pricing")
+def get_pricing():
+    """Get current pricing information for all models."""
+    return {
+        "currency": "USD",
+        "unit": "per 1M tokens",
+        "models": {
+            model: {
+                "input": price['input'],
+                "output": price['output'],
+                "cached": price['cached']
+            }
+            for model, price in PRICING.items() if model != "default"
+        },
+        "notes": [
+            "Cached tokens are significantly cheaper than regular input tokens",
+            "Reasoning models may use additional reasoning tokens counted as output",
+            "Prices are subject to change - check https://docs.x.ai/docs/models for latest"
+        ]
     }
