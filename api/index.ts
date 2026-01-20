@@ -395,7 +395,7 @@ async function handleBriefing(req: Request, res: Response) {
     logger.info(`Briefing generated successfully (request_id: ${requestId})`);
 
     // Log successful API interaction
-    await logApiInteraction({
+    const logged = await logApiInteraction({
       request_id: requestId,
       endpoint: '/api/jarvis',
       method: req.method,
@@ -423,6 +423,7 @@ async function handleBriefing(req: Request, res: Response) {
       usage: result.usage,
       cost: result.cost,
       duration_ms,
+      logged,
       metadata: {
         documents_processed: Object.keys(docContents).length,
         documents_requested: Object.keys(CORE_DOCS).length,

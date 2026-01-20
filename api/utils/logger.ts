@@ -104,8 +104,9 @@ export async function withTiming<T>(
 
 /**
  * Log an API interaction to the centralized logging endpoint
+ * Returns true if logging was successful, false otherwise
  */
-export async function logApiInteraction(entry: LogEntry): Promise<void> {
+export async function logApiInteraction(entry: LogEntry): Promise<boolean> {
   try {
     const logsEndpoint = process.env.LOGS_ENDPOINT || 'https://ai-reply-bot.vercel.app/api/logs';
 
@@ -123,10 +124,14 @@ export async function logApiInteraction(entry: LogEntry): Promise<void> {
 
     if (!response.ok) {
       console.error('[Logger] Failed to log, status:', response.status);
+      return false;
     }
+
+    return true;
   } catch (error) {
     // Don't fail the main request if logging fails
     console.error('[Logger] Failed to log API interaction:', error);
+    return false;
   }
 }
 
