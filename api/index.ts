@@ -15,6 +15,7 @@
 import express, { Request, Response } from 'express';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
+import { logApiInteraction, generateRequestId } from './utils/logger.js';
 
 // Configuration
 const CORE_DOCS: Record<string, string> = {
@@ -282,7 +283,8 @@ app.post('/api/jarvis', async (req: Request, res: Response) => {
 });
 
 async function handleBriefing(req: Request, res: Response) {
-  const requestId = uuidv4();
+  const requestId = generateRequestId();
+  const startTime = Date.now();
   logger.info(`Received briefing request (request_id: ${requestId})`);
 
   try {
@@ -290,6 +292,21 @@ async function handleBriefing(req: Request, res: Response) {
     const apiKey = process.env.XAI_API_KEY;
     if (!apiKey) {
       logger.error(`XAI_API_KEY not set (request_id: ${requestId})`);
+      
+      // Log the error
+      await logApiInteraction({
+        request_id: requestId,
+        endpoint: '/api/jarvis',
+        method: req.method,
+        status: 'error',
+        error: 'XAI_API_KEY not configured',
+        duration_ms: Date.now() - startTime,
+        metadata: {
+          user_agent: req.headers['user-agent'],
+          ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+        },
+      });
+
       return res.status(500).json({
         status: 'error',
         error: `API configuration error: XAI_API_KEY not set (request_id: ${requestId})`,
@@ -320,6 +337,25 @@ async function handleBriefing(req: Request, res: Response) {
     if (Object.keys(docContents).length === 0) {
       const errorDetail = `No documents could be downloaded. Errors: ${downloadErrors.join('; ')}`;
       logger.error(errorDetail);
+      
+      // Log the error
+      await logApiInteraction({
+        request_id: requestId,
+        endpoint: '/api/jarvis',
+        method: req.method,
+        message_content: JSON.stringify(req.body),
+        status: 'error',
+        error: errorDetail,
+        duration_ms: Date.now() - startTime,
+        metadata: {
+          documents_requested: Object.keys(CORE_DOCS).length,
+          documents_processed: 0,
+          download_errors: downloadErrors,
+          user_agent: req.headers['user-agent'],
+          ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+        },
+      });
+
       return res.status(502).json({
         status: 'error',
         error: errorDetail,
@@ -332,13 +368,51 @@ async function handleBriefing(req: Request, res: Response) {
 
     if (!result) {
       logger.error('Briefing generation returned no result');
+      
+      // Log the error
+      await logApiInteraction({
+        request_id: requestId,
+        endpoint: '/api/jarvis',
+        method: req.method,
+        message_content: JSON.stringify(req.body),
+        status: 'error',
+        error: 'Briefing generation failed: no response from AI models',
+        duration_ms: Date.now() - startTime,
+        metadata: {
+          documents_processed: Object.keys(docContents).length,
+          user_agent: req.headers['user-agent'],
+          ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+        },
+      });
+
       return res.status(502).json({
         status: 'error',
         error: 'Briefing generation failed: no response from AI models',
       });
     }
 
+    const duration_ms = Date.now() - startTime;
     logger.info(`Briefing generated successfully (request_id: ${requestId})`);
+
+    // Log successful API interaction
+    await logApiInteraction({
+      request_id: requestId,
+      endpoint: '/api/jarvis',
+      method: req.method,
+      message_content: JSON.stringify(req.body),
+      response_content: result.briefing,
+      model_used: result.model_used,
+      tokens: result.usage,
+      cost: result.cost,
+      duration_ms,
+      status: 'success',
+      metadata: {
+        documents_processed: Object.keys(docContents).length,
+        documents_requested: Object.keys(CORE_DOCS).length,
+        user_agent: req.headers['user-agent'],
+        ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+      },
+    });
 
     return res.json({
       status: 'success',
@@ -348,6 +422,7 @@ async function handleBriefing(req: Request, res: Response) {
       model_used: result.model_used,
       usage: result.usage,
       cost: result.cost,
+      duration_ms,
       metadata: {
         documents_processed: Object.keys(docContents).length,
         documents_requested: Object.keys(CORE_DOCS).length,
@@ -359,7 +434,24 @@ async function handleBriefing(req: Request, res: Response) {
       },
     });
   } catch (error: any) {
+    const duration_ms = Date.now() - startTime;
     logger.error(`Unexpected error (request_id: ${requestId}): ${error.message}`, error);
+    
+    // Log the error
+    await logApiInteraction({
+      request_id: requestId,
+      endpoint: '/api/jarvis',
+      method: req.method,
+      message_content: JSON.stringify(req.body),
+      status: 'error',
+      error: error.message || 'Internal server error',
+      duration_ms,
+      metadata: {
+        user_agent: req.headers['user-agent'],
+        ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+      },
+    });
+
     return res.status(error.status || 500).json({
       status: 'error',
       error: error.message || `Internal server error (request_id: ${requestId})`,
